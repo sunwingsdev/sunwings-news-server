@@ -28,18 +28,34 @@ const advertisementApi = (advertisementCollection) => {
     res.send(result);
   });
 
-  advertisementRouter.patch("/:id", async (req, res) => {
+ 
+advertisementRouter.patch("/:id", async (req, res) => {
+  try {
     const id = req.params.id;
     const { isSelected } = req.body;
     const filter = { _id: new ObjectId(id) };
+    const foundResult = await advertisementCollection.findOne(filter);
+    if (!foundResult) {
+      return res.status(404).send({ message: 'Advertisement not found' });
+    }
     const updateAd = {
-      $set: {
-        isSelected: isSelected,
-      },
+      $set: { isSelected: isSelected },
     };
     const result = await advertisementCollection.updateOne(filter, updateAd);
+    const updateOthersFilter = {
+      _id: { $ne: new ObjectId(id) },
+      position: foundResult.position,
+    };
+    const updateOthers = {
+      $set: { isSelected: false },
+    };
+    await advertisementCollection.updateMany(updateOthersFilter, updateOthers);
     res.send(result);
-  });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: 'An error occurred', error });
+  }
+});
 
   advertisementRouter.patch("/status/:id", async (req, res) => {
     const id = req.params.id;
